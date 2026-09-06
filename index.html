@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Une photo de Mika reconstruite par addition de motifs rayés : animation de Fourier, expérience interactive, mathématiques, code Python et applications concrètes.">
+  <meta name="theme-color" content="#f4f3ed">
+  <title>Un portrait, une somme d’ondes — Fourier en images</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#contenu">Aller au contenu</a>
+  <header class="site-header wrap">
+    <a class="brand" href="#" aria-label="Fourier en images, accueil"><span class="brand-wave" aria-hidden="true">∿</span> FOURIER EN IMAGES</a>
+    <nav aria-label="Navigation principale">
+      <a href="#animation">Voir</a><a href="#comprendre">Comprendre</a><a href="#implementation">Calculer</a><a href="#applications">Appliquer</a>
+    </nav>
+  </header>
+
+  <main id="contenu">
+    <section class="hero wrap" aria-labelledby="titre">
+      <div>
+        <p class="eyebrow">UNE EXPÉRIENCE AVEC MIKA · 06.09.2026</p>
+        <h1 id="titre">Un portrait,<br>une somme <em>d’ondes.</em></h1>
+      </div>
+      <div class="hero-intro">
+        <p>Et si l’on dessinait un visage en additionnant des rayures&nbsp;?</p>
+        <p>Cette animation reconstruit une photo de webcam avec des motifs sinusoïdaux. Chaque ajout rapproche une surface grise d’un portrait, jusqu’au dernier pixel.</p>
+        <a class="text-link" href="#animation">Voir la reconstruction <span aria-hidden="true">↓</span></a>
+      </div>
+    </section>
+
+    <section id="animation" class="animation-section wrap" aria-labelledby="animation-titre">
+      <div class="figure-heading"><h2 id="animation-titre">Le portrait se construit sous vos yeux.</h2><span class="tag">TRANSFORMÉE DE FOURIER 2D</span></div>
+      <figure class="player">
+        <img id="portrait-animation" src="assets/portrait-fourier.gif" width="1000" height="750" fetchpriority="high" alt="Animation : des motifs rayés, puis des groupes de motifs, s’ajoutent à gauche tandis que leur somme fait apparaître le portrait de Mika à droite.">
+        <figcaption class="player-controls">
+          <span id="player-status" role="status">25 secondes · lecture en boucle</span>
+          <div><button id="toggle-animation" class="button button-light" type="button" hidden>Voir l’image fixe</button><a class="button button-dark" href="assets/portrait-fourier.gif" download>Télécharger le GIF <span class="file-size">66,4 Mo</span> <span aria-hidden="true">↗</span></a></div>
+        </figcaption>
+      </figure>
+      <div class="reading-key">
+        <p><span class="small-number">01</span><strong>À gauche, l’ajout.</strong> Le clair augmente la luminosité, le sombre la diminue. Le contraste de ce panneau est amplifié pour rendre les petites contributions visibles.</p>
+        <p><span class="small-number">02</span><strong>À droite, la somme.</strong> Les 40 premiers motifs arrivent un par un. La suite avance par groupes&nbsp;: le panneau gauche montre alors la somme du groupe ajouté.</p>
+      </div>
+      <dl class="facts">
+        <div><dt>384 × 384</dt><dd>pixels dans l’image calculée</dd></div>
+        <div><dt>73 729</dt><dd>motifs, en plus du gris moyen</dd></div>
+        <div><dt>205</dt><dd>images dans le GIF</dd></div>
+        <div><dt>25,15 s</dt><dd>pour la reconstruction animée</dd></div>
+      </dl>
+    </section>
+
+    <section class="chapter wrap" aria-labelledby="contexte-titre">
+      <div class="chapter-label">LE POINT DE DÉPART</div>
+      <div class="chapter-body context">
+        <div>
+          <h2 id="contexte-titre">D’une webcam à une idée mathématique.</h2>
+          <p>Au départ, Mika demande à un assistant de prendre une photo avec sa webcam, puis de le dessiner. L’expérience passe par un portrait au trait, avec une contrainte&nbsp;: utiliser le moins de traits possible.</p>
+          <p>Puis revient le souvenir d’une vidéo de vulgarisation, peut-être de Numberphile ou Computerphile&nbsp;: une image qui se forme en accumulant des motifs rayés. La vidéo précise n’a pas été identifiée. L’idée devient cette expérience de reconstruction par Fourier.</p>
+          <p>La photo est passée en niveaux de gris, recadrée en carré, puis réduite à 384 × 384 pixels. <strong>C’est cette référence que le calcul reconstruit exactement</strong> après arrondi en niveaux de gris entiers.</p>
+        </div>
+        <figure class="reference"><img src="assets/reference-gris.png" width="384" height="384" loading="lazy" alt="Photo de référence en noir et blanc : Mika, portant des lunettes, tient un verre devant une bibliothèque."><figcaption>La référence du calcul.<br>Photo de webcam · recadrage en gris</figcaption></figure>
+      </div>
+    </section>
+
+    <section id="comprendre" class="chapter wrap" aria-labelledby="maths-titre">
+      <div class="chapter-label">01 / LES MATHÉMATIQUES</div>
+      <div class="chapter-body">
+        <h2 id="maths-titre">Une image peut se lire comme un accord.</h2>
+        <p class="lead">Un son peut réunir plusieurs notes. Une image peut réunir plusieurs ondes qui varient dans l’espace.</p>
+        <p>Un pixel gris est un nombre, ici de 0 à 255. L’image entière est donc un tableau de nombres. La <strong>transformée de Fourier discrète</strong> (DFT) exprime ce tableau dans une autre base&nbsp;: des oscillations périodiques. La <strong>FFT</strong> est un algorithme rapide pour calculer cette transformée. <a class="source-link" href="https://numpy.org/doc/stable/reference/routines.fft.html">Référence&nbsp;: NumPy</a></p>
+
+        <h3>La brique élémentaire&nbsp;: une onde rayée</h3>
+        <div class="equation" role="math" aria-label="s de x y égale A fois cosinus de deux pi fois u x plus v y sur N, plus phi">
+          <span>s(x, y) = <b>A</b> cos[2π(<b>u</b>x + <b>v</b>y) / N + <b>φ</b>]</span>
+        </div>
+        <dl class="definitions">
+          <div><dt>u, v · fréquences</dt><dd>Le nombre de cycles suivant les deux axes. Leur combinaison fixe l’espacement et l’orientation des rayures.</dd></div>
+          <div><dt>A · amplitude</dt><dd>La force de l’onde&nbsp;: combien elle éclaircit ou assombrit les pixels.</dd></div>
+          <div><dt>φ · phase</dt><dd>Le décalage du motif&nbsp;: où tombent ses bandes claires et sombres.</dd></div>
+        </dl>
+        <p>Par exemple, <em>u = 4, v = 0</em> donne quatre cycles de gauche à droite, donc des bandes verticales. Avec <em>u = 0, v = 4</em>, elles deviennent horizontales. Une onde couvre toute l’image&nbsp;: aucune ne représente à elle seule un œil ou une bouche.</p>
+
+        <div class="wave-lab" id="wave-lab">
+          <div class="wave-view">
+            <canvas id="wave-canvas" width="320" height="320" role="img" aria-label="Motif sinusoïdal interactif dont les paramètres sont réglables à droite">Une onde sinusoïdale forme des bandes claires et sombres. Activez JavaScript pour régler le motif.</canvas>
+            <p id="wave-summary">u = 4 · v = 2 · A = 90 · φ = 0°</p>
+          </div>
+          <div class="wave-controls">
+            <p class="eyebrow">À VOUS D’ESSAYER</p>
+            <h3>Fabriquez une rayure.</h3>
+            <p>Déplacez les curseurs pour isoler le rôle de chaque paramètre. Ce motif est une démonstration indépendante du portrait.</p>
+            <div class="slider-row"><label for="wave-u">Fréquence horizontale <i>u</i><output id="value-u" for="wave-u">4</output></label><input id="wave-u" type="range" min="-8" max="8" step="1" value="4"></div>
+            <div class="slider-row"><label for="wave-v">Fréquence verticale <i>v</i><output id="value-v" for="wave-v">2</output></label><input id="wave-v" type="range" min="-8" max="8" step="1" value="2"></div>
+            <div class="slider-row"><label for="wave-a">Amplitude <i>A</i><output id="value-a" for="wave-a">90</output></label><input id="wave-a" type="range" min="0" max="120" step="1" value="90"></div>
+            <div class="slider-row"><label for="wave-p">Phase <i>φ</i><output id="value-p" for="wave-p">0°</output></label><input id="wave-p" type="range" min="0" max="360" step="1" value="0"></div>
+            <div class="presets" aria-label="Exemples de rayures"><button type="button" data-u="4" data-v="0">Verticales</button><button type="button" data-u="0" data-v="4">Horizontales</button><button type="button" data-u="4" data-v="4">Diagonales</button></div>
+            <p class="lab-note">Pour l’affichage, l’onde s’ajoute ici à un gris de valeur 128.</p>
+          </div>
+        </div>
+
+        <h3>Retrouver le visage par addition</h3>
+        <p>Le calcul trouve l’amplitude et la phase de chaque fréquence à partir de la photo. On conserve d’abord la composante constante, c’est-à-dire sa luminosité moyenne. Puis on ajoute les ondes, des plus énergétiques aux moins énergétiques.</p>
+        <div class="equation equation-sum" role="math" aria-label="Image égale gris moyen plus la somme des motifs sinusoïdaux"><span>I(x, y) = <b>gris moyen</b> + ∑<sub>k</sub> <b>motif<sub>k</sub>(x, y)</b></span></div>
+        <p>Dans ce calcul, les contributions de fréquences distinctes sont orthogonales&nbsp;: leur produit a une moyenne nulle sur la grille. Leur énergie est additive. Garder les plus énergétiques minimise donc l’erreur quadratique pour un nombre donné de motifs complets de cette décomposition. Cela explique le choix d’ordre utilisé dans le GIF.</p>
+        <p>Les grandes variations de lumière apparaissent souvent tôt, puis les détails s’affinent. Le tri se fait cependant <strong>par énergie, pas strictement par fréquence</strong>. Chaque étape ne fait qu’ajouter les contributions calculées.</p>
+
+        <details>
+          <summary>Voir la formule de la transformée et le regroupement des coefficients</summary>
+          <p>Pour notre image carrée de côté <em>N</em>, les coefficients normalisés sont calculés avec la convention suivante. Les indices <em>x, y, u, v</em> vont de 0 à <em>N − 1</em>.</p>
+          <div class="equation compact"><span>C(u, v) = (1 / N²) ∑<sub>x</sub> ∑<sub>y</sub> I(x, y) exp[−2πi(ux + vy) / N]</span></div>
+          <p>L’inverse additionne les exponentielles de signe positif, pondérées par <em>C(u, v)</em>. Dans le code NumPy, les tableaux sont indexés par ligne puis colonne&nbsp;: <code>[y, x]</code> et <code>[v, u]</code>. <a class="source-link" href="https://numpy.org/doc/stable/reference/routines.fft.html#higher-dimensions">Définition de la DFT 2D</a></p>
+          <p>L’image étant réelle, deux coefficients de fréquences opposées sont conjugués. Leur somme donne une onde réelle d’amplitude <em>2|C|</em> et de phase <em>arg(C)</em>. Les fréquences sont considérées modulo <em>N</em>. <a class="source-link" href="https://numpy.org/doc/stable/reference/routines.fft.html#real-and-hermitian-transforms">Symétrie pour une entrée réelle</a></p>
+          <p>Avec <em>N = 384</em>, quatre coefficients sont leurs propres conjugués&nbsp;: (0, 0), (192, 0), (0, 192) et (192, 192). On traite le premier comme la moyenne, et les trois autres comme des motifs d’amplitude <em>|C|</em>. Il reste donc <strong>(147 456 − 4) / 2 + 3 = 73 729 motifs</strong>. Une paire conserve une amplitude et une phase&nbsp;: ce regroupement n’est pas une compression de moitié des données.</p>
+        </details>
+
+        <figure class="stages"><img src="assets/etapes-fourier.png" width="1000" height="780" loading="lazy" alt="Six étapes de reconstruction : 0, 1, 8, 40, 1 042 et 73 729 motifs. Les grandes masses précèdent les détails du visage."><figcaption>Six arrêts sur image. Avec 1 042 motifs, environ 94,08 % de l’énergie des détails est déjà représentée.</figcaption></figure>
+        <aside class="note"><h3>Que mesure le pourcentage&nbsp;?</h3><p>L’«&nbsp;énergie des détails&nbsp;» correspond à la moyenne du carré des variations autour du gris moyen. La barre indique la part d’énergie présente dans la somme courante. Pour une paire complète, la contribution vaut <em>2|C|²</em> ; pour un coefficient autoconjugué, <em>|C|²</em>. Ce nombre ne mesure pas directement la ressemblance perçue ni un taux de compression.</p></aside>
+      </div>
+    </section>
+
+    <section id="implementation" class="chapter wrap" aria-labelledby="code-titre">
+      <div class="chapter-label">02 / L’IMPLÉMENTATION</div>
+      <div class="chapter-body">
+        <h2 id="code-titre">Des pixels au GIF, en Python.</h2>
+        <p class="lead">NumPy fait le calcul numérique. Pillow prépare les images, dessine les annotations et assemble l’animation.</p>
+        <ol class="pipeline">
+          <li><h3>Préparer la référence</h3><p>La photo de 1 280 × 720 pixels est convertie en gris. On en extrait le carré allant de (340, 0) à (1 060, 720), puis on le réduit à 384 × 384 avec un filtre Lanczos. Le tableau de calcul utilise des nombres flottants sur 64 bits.</p></li>
+          <li><h3>Calculer et classer les ondes</h3><p><code>fft2(image) / N²</code> donne le spectre normalisé. Chaque coefficient est regroupé avec son conjugué. Les groupes sont classés selon leur énergie décroissante. La moyenne, environ 121,61 sur 255, est présente dès le départ.</p></li>
+          <li><h3>Reconstruire les étapes</h3><p>Un spectre partiel reçoit progressivement les coefficients retenus. <code>ifft2(partiel).real * N²</code> produit la somme correspondante. Les huit premières ondes ont quatre étapes d’amplitude ; les suivantes arrivent seules jusqu’au motif 40, puis par groupes de taille croissante.</p></li>
+          <li><h3>Afficher et encoder</h3><p>Le panneau gauche affiche la différence entre deux sommes successives, avec un contraste amplifié. Le panneau droit affiche la reconstruction à son intensité réelle, arrondie et limitée à 0–255 pour l’écran seulement. Une palette commune de 256 gris est utilisée pour les 205 images du GIF. <a class="source-link" href="https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html#gif">Options GIF de Pillow</a></p></li>
+        </ol>
+
+        <div class="code-block"><div class="code-heading"><span>Le cœur du calcul</span><span>Python / NumPy</span></div><pre><code><span class="comment"># image : tableau carré de niveaux de gris</span>
+N = image.shape[0]
+spectre = np.fft.fft2(image) / (N * N)
+partiel = np.zeros_like(spectre)
+partiel[0, 0] = spectre[0, 0]  <span class="comment"># le gris moyen</span>
+
+<span class="comment"># groupes_tries contient les indices d’une fréquence</span>
+<span class="comment"># et de son conjugué, par énergie décroissante.</span>
+for indices in groupes_tries:
+    partiel.ravel()[indices] = spectre.ravel()[indices]
+    somme = np.fft.ifft2(partiel).real * (N * N)
+    <span class="comment"># Conserver une étape pour l’animation.</span></code></pre></div>
+        <p class="caption">Extrait de principe. Le script complet inclut le classement, les groupes, le rendu et les vérifications.</p>
+
+        <div class="verification"><span class="verification-mark" aria-hidden="true">✓</span><div><h3>Vérifié jusque dans les pixels</h3><p>L’erreur maximale finale avant arrondi est d’environ <strong>1,71 × 10<sup>−13</sup></strong> niveau de gris. Après arrondi, l’image reconstruite est identique à la référence. Le script vérifie aussi la symétrie, la décroissance de l’erreur quadratique et le panneau final du GIF décodé.</p><a href="calcul/fourier-stats.json">Consulter les mesures du calcul ↗</a></div></div>
+
+        <details>
+          <summary>Reproduire l’animation sur son ordinateur</summary>
+          <p>Le dossier contient la référence en gris, le script Python et les polices du rendu. Depuis la racine du dossier, avec Python 3 installé&nbsp;:</p>
+          <pre class="terminal"><code>python -m venv .venv
+# Linux / macOS
+source .venv/bin/activate
+# Windows PowerShell : .venv\Scripts\Activate.ps1
+python -m pip install -r calcul/requirements.txt
+python calcul/create_fourier_gif.py</code></pre>
+          <p>Les résultats sont écrits dans <code>resultats/</code>. Le script fourni repart de la référence déjà préparée ; le GIF affiché sur cette page est la copie de l’animation initiale. Il faut quelques centaines de mégaoctets de mémoire pour conserver les images avant l’encodage.</p>
+          <p><a href="calcul/create_fourier_gif.py" download>Télécharger le script complet</a> · <a href="calcul/requirements.txt" download>Dépendances Python</a></p>
+        </details>
+
+        <aside class="note"><h3>Pourquoi un GIF de 66,4 Mo&nbsp;?</h3><p>Il contient 205 images de 1 000 × 750 pixels, avec des textures qui changent beaucoup. La décomposition de Fourier sert ici à expliquer une construction. Ce GIF n’est pas une démonstration de compression efficace&nbsp;: il est bien plus volumineux que la photo de référence.</p></aside>
+      </div>
+    </section>
+
+    <section id="applications" class="applications-band" aria-labelledby="applications-titre">
+      <div class="wrap chapter">
+        <div class="chapter-label">03 / DANS LE MONDE RÉEL</div>
+        <div class="chapter-body">
+          <h2 id="applications-titre">La même idée, bien au-delà d’un portrait.</h2>
+          <p class="lead">Passer d’un signal à ses fréquences permet de le comprendre, de le modifier ou de le reconstruire.</p>
+          <div class="applications-grid">
+            <article><span class="application-number">01 / IMAGES</span><h3>Réduire le poids des photos</h3><p>Le JPEG classique avec pertes transforme des blocs de 8 × 8 pixels avec une <strong>transformée en cosinus discrète</strong> (DCT). Il quantifie ensuite les coefficients&nbsp;: les moins bien conservés perdent de la précision et certains deviennent nuls, ce qui facilite leur codage. La DCT est apparentée à Fourier, mais ses motifs et ses conditions aux bords diffèrent de notre DFT appliquée à toute l’image.</p><a href="https://watkins.cs.queensu.ca/~jstewart/457/notes/30/30-jpeg-encoding.html">Cours sur JPEG · Queen’s University ↗</a></article>
+            <article><span class="application-number">02 / SON & MESURE</span><h3>Repérer les fréquences d’un signal</h3><p>Un analyseur de spectre utilise une FFT pour révéler les composantes fréquentielles d’un enregistrement. Sur un signal sonore, cela peut montrer une fondamentale, ses harmoniques ou une tonalité parasite. On retrouve l’idée du portrait, avec des variations au cours du temps plutôt que selon deux axes de l’image.</p><a href="https://wiki.analog.com/university/tools/m1k/alice/desktop-sa-ba-ia-users-guide">Analyseur FFT · Analog Devices ↗</a></article>
+            <article><span class="application-number">03 / IMAGERIE</span><h3>Reconstruire les images en IRM</h3><p>En imagerie par résonance magnétique, l’encodage spatial fournit des mesures liées aux fréquences spatiales, dans l’<em>espace k</em>. Une reconstruction de Fourier permet de retrouver une image à partir de ces mesures. Dans un cas cartésien simple, une transformée inverse constitue une étape centrale du calcul.</p><a href="https://www.ncbi.nlm.nih.gov/books/NBK546152/">Principes de l’IRM · Lugauer & Wetzl ↗</a></article>
+            <article><span class="application-number">04 / TRAITEMENT</span><h3>Accélérer certains filtres</h3><p>Un flou peut se calculer par convolution de l’image avec un noyau. La convolution correspond à une multiplication dans le domaine fréquentiel&nbsp;: FFT de l’image et du noyau, multiplication, puis transformée inverse. Avec un remplissage adapté aux bords, cette méthode peut accélérer les convolutions de grande taille.</p><a href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.fftconvolve.html">Exemple de flou par FFT · SciPy ↗</a></article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="chapter wrap" aria-labelledby="limites-titre">
+      <div class="chapter-label">POUR GARDER LES IDÉES CLAIRES</div>
+      <div class="chapter-body">
+        <h2 id="limites-titre">Ce que l’expérience montre.</h2>
+        <div class="takeaways">
+          <p><strong>Les détails viennent de la photo.</strong> Cette reconstruction est entièrement numérique et déterministe. Amplitudes et phases sont calculées à partir de la référence ; aucun modèle génératif n’intervient dans cette animation.</p>
+          <p><strong>Exact veut dire exact pour cette référence.</strong> Le résultat retrouve le carré de 384 × 384 pixels en gris. Le recadrage, la réduction et la conversion ont déjà écarté une partie des informations de la photo couleur initiale.</p>
+          <p><strong>Les étapes intermédiaires sont des approximations.</strong> Des ondulations peuvent apparaître près des contrastes forts. La DFT traite la grille comme périodique&nbsp;: les différences entre les bords opposés participent elles aussi aux fréquences calculées.</p>
+        </div>
+        <div class="resources"><h3>Les fichiers de l’expérience</h3><a href="assets/portrait-fourier.gif" download>Animation GIF <span>66,4 Mo ↗</span></a><a href="assets/reference-gris.png" download>Image de référence <span>PNG ↗</span></a><a href="calcul/create_fourier_gif.py" download>Script reproductible <span>Python ↗</span></a><a href="calcul/fourier-stats.json" download>Mesures et vérifications <span>JSON ↗</span></a></div>
+        <p class="sources-note">Les liens documentaires sont placés au fil des explications. Pour approfondir la variante en cosinus&nbsp;: <a href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.fft.dct.html">définition de la DCT dans SciPy</a>. Les images et les mesures présentées ici proviennent du calcul de cette expérience.</p>
+      </div>
+    </section>
+  </main>
+  <footer class="site-footer wrap"><a class="brand" href="#"><span class="brand-wave" aria-hidden="true">∿</span> FOURIER EN IMAGES</a><p>Une expérience de Mika, réalisée avec un assistant.<br>Septembre 2026 · Photo, calcul et animation.</p><a href="#">Retour en haut ↑</a></footer>
+</body>
+</html>
