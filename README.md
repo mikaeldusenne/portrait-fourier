@@ -3,7 +3,7 @@
 Un portrait reconstruit par addition d’ondes sinusoïdales en 2D, avec une page pédagogique en français et le code Python reproductible.
 
 - [Voir la page](https://mikaeldusenne.github.io/portrait-fourier/)
-- [Code source](https://github.com/mikaeldusenne/portrait-fourier)
+- [Code source](https://github.com/mikaeldusenne/portrait-fourier/tree/fix/video-source)
 
 ## Ce qui s’ajoute
 
