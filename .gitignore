@@ -2,6 +2,9 @@
 __pycache__/
 resultats/
 node_modules/
-assets/*.gif
+assets/*
+!assets/*.mp4
+!assets/*.png
+!assets/*.svg
 .agents/
 .codex/

@@ -7,8 +7,8 @@
   <meta name="theme-color" content="#f4f3ed">
   <title>Un portrait, une somme d’ondes — Fourier en images</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css">
-  <script src="app.js" defer></script>
+  <link rel="stylesheet" href="style.css?v=2">
+  <script src="app.js?v=2" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#contenu">Aller au contenu</a>
@@ -88,23 +88,45 @@
         </dl>
         <p>Par exemple, <em>u = 4, v = 0</em> donne quatre cycles de gauche à droite, donc des bandes verticales. Avec <em>u = 0, v = 4</em>, elles deviennent horizontales. Une onde couvre toute l’image&nbsp;: aucune ne représente à elle seule un œil ou une bouche.</p>
 
-        <div class="wave-lab" id="wave-lab">
-          <div class="wave-view">
-            <canvas id="wave-canvas" width="320" height="320" role="img" aria-label="Motif sinusoïdal interactif dont les paramètres sont réglables à droite">Une onde sinusoïdale forme des bandes claires et sombres. Activez JavaScript pour régler le motif.</canvas>
-            <p id="wave-summary">u = 4 · v = 2 · A = 90 · φ = 0°</p>
-          </div>
+        <section class="wave-lab" id="wave-lab" aria-labelledby="wave-lab-title">
           <div class="wave-controls">
             <p class="eyebrow">À VOUS D’ESSAYER</p>
-            <h3>Fabriquez une rayure.</h3>
-            <p>Déplacez les curseurs pour isoler le rôle de chaque paramètre. Ce motif est une démonstration indépendante du portrait.</p>
-            <div class="slider-row"><label for="wave-u">Fréquence horizontale <i>u</i><output id="value-u" for="wave-u">4</output></label><input id="wave-u" type="range" min="-8" max="8" step="1" value="4"></div>
-            <div class="slider-row"><label for="wave-v">Fréquence verticale <i>v</i><output id="value-v" for="wave-v">2</output></label><input id="wave-v" type="range" min="-8" max="8" step="1" value="2"></div>
-            <div class="slider-row"><label for="wave-a">Amplitude <i>A</i><output id="value-a" for="wave-a">90</output></label><input id="wave-a" type="range" min="0" max="120" step="1" value="90"></div>
-            <div class="slider-row"><label for="wave-p">Phase <i>φ</i><output id="value-p" for="wave-p">0°</output></label><input id="wave-p" type="range" min="0" max="360" step="1" value="0"></div>
-            <div class="presets" aria-label="Exemples de rayures"><button type="button" data-u="4" data-v="0">Verticales</button><button type="button" data-u="0" data-v="4">Horizontales</button><button type="button" data-u="4" data-v="4">Diagonales</button></div>
-            <p class="lab-note">Pour l’affichage, l’onde s’ajoute ici à un gris de valeur 128.</p>
+            <h3 id="wave-lab-title">Construisez une image, onde après onde.</h3>
+            <p>Réglez l’onde à gauche, puis cliquez sur <strong>Ajouter</strong> pour l’additionner à l’image de droite. Changez les réglages et recommencez&nbsp;: les ondes déjà ajoutées restent en place. Vous composez ici votre propre image.</p>
           </div>
-        </div>
+          <div class="wave-panels">
+            <figure class="wave-view">
+              <h4>01 · L’onde à ajouter</h4>
+              <canvas id="wave-canvas" width="320" height="320" role="img" aria-label="Aperçu de l’onde à ajouter">Activez JavaScript pour régler et ajouter des ondes.</canvas>
+              <figcaption id="wave-summary">u = 4 · v = 2 · A = 40 · φ = 0°</figcaption>
+            </figure>
+            <figure class="wave-view">
+              <h4>02 · Votre image cumulée</h4>
+              <canvas id="sum-canvas" width="320" height="320" role="img" aria-label="Image cumulée : gris uniforme, aucune onde ajoutée">L’image part d’un gris uniforme. Chaque onde ajoutée l’éclaircit ou l’assombrit localement.</canvas>
+              <figcaption id="sum-status" role="status" aria-live="polite" aria-atomic="true">0 onde ajoutée · gris de départ</figcaption>
+            </figure>
+          </div>
+          <div class="wave-controls">
+            <fieldset id="wave-inputs" disabled>
+              <legend class="sr-only">Régler et additionner les ondes</legend>
+              <div class="wave-sliders">
+                <div class="slider-row"><label for="wave-u">Fréquence horizontale <i>u</i><output id="value-u" for="wave-u">4</output></label><input id="wave-u" type="range" min="-8" max="8" step="1" value="4"></div>
+                <div class="slider-row"><label for="wave-v">Fréquence verticale <i>v</i><output id="value-v" for="wave-v">2</output></label><input id="wave-v" type="range" min="-8" max="8" step="1" value="2"></div>
+                <div class="slider-row"><label for="wave-a">Amplitude <i>A</i><output id="value-a" for="wave-a">40</output></label><input id="wave-a" type="range" min="0" max="120" step="1" value="40"></div>
+                <div class="slider-row"><label for="wave-p">Phase <i>φ</i><output id="value-p" for="wave-p">0°</output></label><input id="wave-p" type="range" min="0" max="360" step="1" value="0"></div>
+              </div>
+              <div class="presets" aria-label="Exemples de rayures"><button type="button" data-u="4" data-v="0">Verticales</button><button type="button" data-u="0" data-v="4">Horizontales</button><button type="button" data-u="4" data-v="4">Diagonales</button></div>
+              <div class="wave-actions">
+                <button id="add-wave" class="button button-dark" type="button">Ajouter <span aria-hidden="true">+</span></button>
+                <button id="undo-wave" class="button button-light" type="button" disabled>Annuler le dernier ajout</button>
+                <button id="reset-waves" class="button button-light" type="button" disabled>Recommencer</button>
+              </div>
+            </fieldset>
+            <p class="lab-note">Le gris de départ vaut 128. Le clair de l’onde ajoute de la lumière, le sombre en retire. Ajoutez une onde, puis la même décalée de 180°&nbsp;: vous retrouvez le gris initial. Ajouter deux fois la même onde renforce au contraire son effet.</p>
+            <p class="lab-note" id="sum-clipping">Chaque ajout conserve toute sa contribution, même dans les zones devenues blanches ou noires.</p>
+            <noscript><p>Activez JavaScript pour utiliser cet atelier. La vidéo et les explications restent accessibles.</p></noscript>
+          </div>
+        </section>
 
         <h3>Retrouver le visage par addition</h3>
         <p>Le calcul trouve l’amplitude et la phase de chaque fréquence à partir de la photo. On conserve d’abord la composante constante, c’est-à-dire sa luminosité moyenne. Puis on ajoute les ondes, des plus énergétiques aux moins énergétiques.</p>
@@ -135,7 +157,7 @@
           <li><h3>Préparer la référence</h3><p>La photo de 1 280 × 720 pixels est convertie en gris. On en extrait le carré allant de (340, 0) à (1 060, 720), puis on le réduit à 384 × 384 avec un filtre Lanczos. Le tableau de calcul utilise des nombres flottants sur 64 bits.</p></li>
           <li><h3>Calculer et classer les ondes</h3><p><code>fft2(image) / N²</code> donne le spectre normalisé. Chaque coefficient est regroupé avec son conjugué. Les groupes sont classés selon leur énergie décroissante. La moyenne, environ 121,61 sur 255, est présente dès le départ.</p></li>
           <li><h3>Reconstruire les étapes</h3><p>Un spectre partiel reçoit progressivement les coefficients retenus. <code>ifft2(partiel).real * N²</code> produit la somme correspondante. Les huit premières ondes ont quatre étapes d’amplitude ; les suivantes arrivent seules jusqu’au motif 40, puis par groupes de taille croissante.</p></li>
-          <li><h3>Afficher et encoder</h3><p>Le panneau gauche affiche la différence entre deux sommes successives, avec un contraste amplifié. Le panneau droit affiche la reconstruction à son intensité réelle, arrondie et limitée à 0–255 pour l’écran seulement. Les 205 états calculés sont envoyés directement à FFmpeg, qui les encode en H.264 de haute qualité, sans passer par un GIF. <a class="source-link" href="https://ffmpeg.org/ffmpeg.html">Documentation FFmpeg</a></p></li>
+          <li><h3>Afficher et encoder</h3><p>Le panneau gauche affiche la différence entre deux sommes successives, avec un contraste amplifié. Le panneau droit affiche la reconstruction à son intensité réelle, arrondie et limitée à 0–255 pour l’écran seulement. Les 205 états calculés sont envoyés directement à FFmpeg, qui les encode en H.264 de haute qualité. <a class="source-link" href="https://ffmpeg.org/ffmpeg.html">Documentation FFmpeg</a></p></li>
         </ol>
 
         <div class="code-block"><div class="code-heading"><span>Le cœur du calcul</span><span>Python / NumPy</span></div><pre><code><span class="comment"># image : tableau carré de niveaux de gris</span>
@@ -163,11 +185,11 @@ source .venv/bin/activate
 # Windows PowerShell : .venv\Scripts\Activate.ps1
 python -m pip install -r calcul/requirements.txt
 python calcul/create_fourier_video.py</code></pre>
-          <p>Les résultats sont écrits dans <code>resultats/</code>. Le script fourni repart de la référence déjà préparée et génère la vidéo affichée ici. L’option <code>--gif</code> produit aussi un GIF. Il faut quelques centaines de mégaoctets de mémoire pour conserver les étapes avant l’encodage.</p>
+          <p>Les résultats sont écrits dans <code>resultats/</code>. Le script fourni repart de la référence déjà préparée et génère la vidéo affichée ici. Il faut quelques centaines de mégaoctets de mémoire pour conserver les étapes avant l’encodage.</p>
           <p><a href="calcul/create_fourier_video.py" download>Télécharger le script complet</a> · <a href="calcul/requirements.txt" download>Dépendances Python</a></p>
         </details>
 
-        <aside class="note"><h3>Pourquoi une vidéo&nbsp;?</h3><p>Le MP4 remplace le GIF initial de 66,4 Mo. Il permet de faire pause, de revenir sur une étape et de regarder en plein écran. Le panneau gauche devient plus complexe quand plusieurs ondes se superposent&nbsp;: changer de format ne transforme pas leur somme en une seule onde. L’image fixe finale reste disponible en PNG, sans perte.</p></aside>
+
       </div>
     </section>
 
@@ -196,11 +218,11 @@ python calcul/create_fourier_video.py</code></pre>
           <p><strong>Exact veut dire exact pour cette référence.</strong> Le résultat retrouve le carré de 384 × 384 pixels en gris. Le recadrage, la réduction et la conversion ont déjà écarté une partie des informations de la photo couleur initiale.</p>
           <p><strong>Les étapes intermédiaires sont des approximations.</strong> Des ondulations peuvent apparaître près des contrastes forts. La DFT traite la grille comme périodique&nbsp;: les différences entre les bords opposés participent elles aussi aux fréquences calculées.</p>
         </div>
-        <div class="resources"><h3>Les fichiers de l’expérience</h3><a href="https://github.com/mikaeldusenne/portrait-fourier/tree/fix/video-source">Tout le code et cette page sur GitHub <span>Dépôt source ↗</span></a><a href="assets/portrait-fourier.mp4" download>Vidéo de la reconstruction <span>MP4 · 6,6 Mo ↗</span></a><a href="assets/reference-gris.png" download>Image de référence <span>PNG ↗</span></a><a href="calcul/create_fourier_video.py" download>Script reproductible <span>Python ↗</span></a><a href="calcul/fourier-stats.json" download>Mesures et vérifications <span>JSON ↗</span></a></div>
+        <div class="resources"><h3>Les fichiers de l’expérience</h3><a href="https://github.com/mikaeldusenne/portrait-fourier/tree/feat/wave-addition-workshop">Tout le code et cette page sur GitHub <span>Dépôt source ↗</span></a><a href="assets/portrait-fourier.mp4" download>Vidéo de la reconstruction <span>MP4 · 6,6 Mo ↗</span></a><a href="assets/reference-gris.png" download>Image de référence <span>PNG ↗</span></a><a href="calcul/create_fourier_video.py" download>Script reproductible <span>Python ↗</span></a><a href="calcul/fourier-stats.json" download>Mesures et vérifications <span>JSON ↗</span></a></div>
         <p class="sources-note">Les liens documentaires sont placés au fil des explications. Pour approfondir la variante en cosinus&nbsp;: <a href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.fft.dct.html">définition de la DCT dans SciPy</a>. Les images et les mesures présentées ici proviennent du calcul de cette expérience.</p>
       </div>
     </section>
   </main>
-  <footer class="site-footer wrap"><a class="brand" href="#"><span class="brand-wave" aria-hidden="true">∿</span> FOURIER EN IMAGES</a><p>Une expérience de Mika, réalisée avec un assistant.<br>Septembre 2026 · Photo, calcul et animation.</p><a href="https://github.com/mikaeldusenne/portrait-fourier/tree/fix/video-source">Code source sur GitHub ↗</a><a href="#">Retour en haut ↑</a></footer>
+  <footer class="site-footer wrap"><a class="brand" href="#"><span class="brand-wave" aria-hidden="true">∿</span> FOURIER EN IMAGES</a><p>Une expérience de Mika, réalisée avec un assistant.<br>Septembre 2026 · Photo, calcul et animation.</p><a href="https://github.com/mikaeldusenne/portrait-fourier/tree/feat/wave-addition-workshop">Code source sur GitHub ↗</a><a href="#">Retour en haut ↑</a></footer>
 </body>
 </html>

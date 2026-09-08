@@ -3,7 +3,7 @@
 Un portrait reconstruit par addition d’ondes sinusoïdales en 2D, avec une page pédagogique en français et le code Python reproductible.
 
 - [Voir la page](https://mikaeldusenne.github.io/portrait-fourier/)
-- [Code source](https://github.com/mikaeldusenne/portrait-fourier/tree/fix/video-source)
+- [Code source](https://github.com/mikaeldusenne/portrait-fourier/tree/feat/wave-addition-workshop)
 
 ## Ce qui s’ajoute
 
@@ -19,9 +19,15 @@ Ouvrir `index.html` dans un navigateur, ou servir le dossier :
 python -m http.server 8000
 ```
 
-Puis ouvrir http://localhost:8000. Aucun build, CDN, cookie ni API n’est nécessaire. La vidéo MP4 H.264 mesure 1 000 × 750 pixels, dure 25,15 secondes et pèse environ **6,6 Mo**, contre 66,4 Mo pour le GIF initial. Les commandes natives permettent la lecture, la pause, le déplacement dans le temps et le plein écran. La lecture démarre à la demande. Avec une préférence de réduction des animations, l’image fixe est affichée par défaut ; la vidéo reste accessible.
+Puis ouvrir http://localhost:8000. Aucun build, CDN, cookie ni API n’est nécessaire. La vidéo MP4 H.264 mesure 1 000 × 750 pixels, dure 25,15 secondes et pèse environ **6,6 Mo**. Les commandes natives permettent la lecture, la pause, le déplacement dans le temps et le plein écran. La lecture démarre à la demande. Avec une préférence de réduction des animations, l’image fixe est affichée par défaut ; la vidéo reste accessible.
 
 La vidéo et l’article fonctionnent sans JavaScript. Le script de la page ajoute le choix entre vidéo et PNG ainsi que le petit laboratoire d’ondes.
+
+## Construire sa propre image
+
+L’atelier « À vous d’essayer » affiche l’onde réglable à gauche et la somme cumulée à droite. Choisir les fréquences, l’amplitude et la phase, puis cliquer sur **Ajouter**. Modifier les curseurs change seulement l’aperçu ; les contributions précédentes restent dans la somme. **Annuler le dernier ajout** retire une contribution ; **Recommencer** retrouve le gris initial.
+
+Le calcul conserve les sommes en nombres flottants et n’arrondit ni ne limite les valeurs intermédiaires. Seul l’affichage est limité à 0–255 : même après saturation visuelle, une onde de phase opposée annule sa contribution. Les deux panneaux utilisent la même échelle de gris. Ce dessin libre est indépendant des composantes calculées pour le portrait.
 
 ## Fichiers
 
@@ -34,8 +40,6 @@ La vidéo et l’article fonctionnent sans JavaScript. Le script de la page ajou
 - `calcul/requirements.txt` : dépendances Python fixées.
 - `calcul/fourier-stats.json` : mesures du calcul et de la vidéo publiée.
 - `calcul/fonts/` : polices Liberation Sans et licence OFL.
-
-Le GIF initial est exclu du dépôt pour conserver un téléchargement léger. Le générateur permet de recréer une version GIF avec les annotations actualisées.
 
 ## Recalculer
 
@@ -52,11 +56,7 @@ python calcul/create_fourier_video.py
 
 Sous Windows PowerShell, utiliser `.venv\Scripts\Activate.ps1` pour activer l’environnement.
 
-Les sorties sont écrites dans `resultats/`, sans modifier les médias de la page. Pour mettre à jour la page, recopier `portrait-fourier.mp4`, `animation-apercu.png` et `etapes-fourier.png` dans `assets/`, puis `fourier-stats.json` dans `calcul/` ; actualiser aussi le poids affiché si nécessaire. Pour produire également un GIF :
-
-```sh
-python calcul/create_fourier_video.py --gif
-```
+Les sorties sont écrites dans `resultats/`, sans modifier les médias de la page. Pour mettre à jour la page, recopier `portrait-fourier.mp4`, `animation-apercu.png` et `etapes-fourier.png` dans `assets/`, puis `fourier-stats.json` dans `calcul/` ; actualiser aussi le poids affiché si nécessaire.
 
 Le script repart de la référence préparée, sans nécessiter la photo webcam entière. Préparation originale : photo 1 280 × 720, conversion Pillow en `L`, recadrage `(340, 0, 1060, 720)`, réduction Lanczos à 384 × 384. Les polices sont incluses. Prévoir quelques centaines de mégaoctets de mémoire.
 
@@ -66,11 +66,11 @@ Les 205 états sont maintenus à l’écran pendant leur durée originale, sur u
 
 Le générateur contrôle la couverture du spectre, l’énergie (Parseval), la concordance de trois composantes isolées avec leur formule en cosinus, la réalité de la reconstruction et la décroissance de l’erreur quadratique. L’erreur finale maximale du calcul est de **1,71 × 10⁻¹³** niveau de gris ; après arrondi, les pixels sont identiques à la référence.
 
-Cette identité concerne le calcul et le PNG. Le MP4 utilise une compression avec pertes : le script décode toute la vidéo, vérifie sa durée, son format et son nombre d’images, puis mesure l’erreur du portrait final. Sur la vidéo publiée, son erreur quadratique moyenne en racine vaut **1,42 niveau de gris sur 255** (seuil de contrôle : 2). Avec `--gif`, le script contrôle aussi la durée et l’identité du panneau final du GIF.
+Cette identité concerne le calcul et le PNG. Le MP4 utilise une compression avec pertes : le script décode toute la vidéo, vérifie sa durée, son format et son nombre d’images, puis mesure l’erreur du portrait final. Sur la vidéo publiée, son erreur quadratique moyenne en racine vaut **1,42 niveau de gris sur 255** (seuil de contrôle : 2).
 
 ## Publication
 
-La page HTML et ses ressources vivent dans ce même dépôt. GitHub Pages sert la racine de la branche `fix/video-source`. `.nojekyll` permet de servir les fichiers statiques directement. Un autre hébergement statique convient aussi : les chemins de ressources sont relatifs.
+La page HTML et ses ressources vivent dans ce même dépôt. GitHub Pages sert la racine de la branche `feat/wave-addition-workshop`. `.nojekyll` permet de servir les fichiers statiques directement. Un autre hébergement statique convient aussi : les chemins de ressources sont relatifs.
 
 ## Sources et crédits
 

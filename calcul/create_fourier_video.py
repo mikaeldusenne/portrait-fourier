@@ -2,7 +2,6 @@
 """Reconstruct the supplied portrait by adding actual 2D Fourier components.
 
 Render the Fourier reconstruction directly to an H.264 video.
-Use --gif to also export the historical GIF format.
 Input: ../assets/reference-gris.png, already cropped and resized.
 Output: ../resultats/. Fonts are bundled in ./fonts/.
 Dependencies: numpy, Pillow (see requirements.txt), ffmpeg and ffprobe on PATH.
@@ -15,8 +14,7 @@ import shutil
 import subprocess
 
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument("--gif", action="store_true", help="Also generate and verify a GIF")
-args = parser.parse_args()
+parser.parse_args()
 for executable in ("ffmpeg", "ffprobe"):
     if not shutil.which(executable):
         parser.error(f"Install {executable} and put it on PATH before running this script.")
@@ -256,25 +254,6 @@ expected_panel = np.asarray(reference.resize((512, 512), Image.Resampling.LANCZO
 video_rmse = float(np.sqrt(np.mean((final_panel - expected_panel) ** 2)))
 assert video_rmse < 2, f"Excessive video compression error: {video_rmse}"
 
-if args.gif:
-    # A shared identity grayscale palette preserves the photograph and avoids flicker.
-    gif_path = OUT / "portrait-fourier.gif"
-    frames[0].save(gif_path, save_all=True, append_images=frames[1:],
-                   duration=durations, loop=0, optimize=False, disposal=1)
-    with Image.open(gif_path) as gif:
-        assert gif.size == SIZE
-        actual_frames = gif.n_frames
-        actual_duration = 0
-        for index in range(actual_frames):
-            gif.seek(index)
-            gif.load()
-            actual_duration += gif.info.get("duration", 0)
-        # Verify the rendered GIF's last portrait is identical to the expected panel.
-        final_panel = np.asarray(gif.convert("L").crop((456, 142, 968, 654)))
-        expected_panel = np.asarray(reference.resize((512, 512), Image.Resampling.LANCZOS))
-        assert np.array_equal(final_panel, expected_panel)
-        assert actual_duration == sum(durations)
-
 sheet = Image.new("L", (1000, 780), 248)
 draw = ImageDraw.Draw(sheet)
 for index, (count, stage) in enumerate(stages):
@@ -300,8 +279,5 @@ stats = {
     "all_frame_rmse_monotonic": True, "rounded_reconstruction_matches_reference": True,
     "frames": measurements,
 }
-if args.gif:
-    stats.update(gif_frames=actual_frames, gif_bytes=gif_path.stat().st_size,
-                 gif_final_panel_matches_reference=True)
 (OUT / "fourier-stats.json").write_text(json.dumps(stats, indent=2), encoding="utf-8")
 print(json.dumps({key: value for key, value in stats.items() if key != "frames"}, indent=2), flush=True)
