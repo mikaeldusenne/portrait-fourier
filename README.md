@@ -70,9 +70,11 @@ Cette identité concerne le calcul et le PNG. Le MP4 utilise une compression ave
 
 ## Publication
 
-La page HTML et ses ressources vivent dans ce même dépôt. GitHub Pages sert la racine de la branche `feat/video-github`. `.nojekyll` permet de servir les fichiers statiques directement. Un autre hébergement statique convient aussi : les chemins de ressources sont relatifs.
+La page HTML et ses ressources vivent dans ce même dépôt. GitHub Pages sert la racine de la branche `fix/video-source`. `.nojekyll` permet de servir les fichiers statiques directement. Un autre hébergement statique convient aussi : les chemins de ressources sont relatifs.
 
 ## Sources et crédits
+
+Vidéo à l’origine de l’expérience : [Every picture is made of waves — Sixty Symbols](https://www.youtube.com/watch?v=mEN7DTdHbAU), retrouvée par Mika.
 
 Photo : Mika. Expérience réalisée avec l’aide d’un assistant en septembre 2026. Les références documentaires sont liées dans la page, notamment [NumPy](https://numpy.org/doc/stable/reference/routines.fft.html) et [FFmpeg](https://ffmpeg.org/ffmpeg.html).
 
