@@ -35,20 +35,24 @@
     <section id="animation" class="animation-section wrap" aria-labelledby="animation-titre">
       <div class="figure-heading"><h2 id="animation-titre">Le portrait se construit sous vos yeux.</h2><span class="tag">TRANSFORMÉE DE FOURIER 2D</span></div>
       <figure class="player">
-        <img id="portrait-animation" src="assets/portrait-fourier.gif" width="1000" height="750" fetchpriority="high" alt="Animation : des motifs rayés, puis des groupes de motifs, s’ajoutent à gauche tandis que leur somme fait apparaître le portrait de Mika à droite.">
+        <video id="portrait-animation" width="1000" height="750" controls muted playsinline preload="metadata" poster="assets/animation-apercu.png" aria-label="Reconstruction du portrait de Mika : une onde à la fois jusqu’à 40, puis des groupes d’ondes." aria-describedby="lecture-animation">
+          <source src="assets/portrait-fourier.mp4" type="video/mp4">
+          Votre navigateur ne peut pas lire cette vidéo. <a href="assets/portrait-fourier.mp4">Télécharger la vidéo MP4</a>.
+        </video>
+        <img id="portrait-still" src="assets/animation-apercu.png" width="1000" height="750" hidden alt="Reconstruction complète du portrait de Mika après addition de 73 729 ondes au gris moyen.">
         <figcaption class="player-controls">
-          <span id="player-status" role="status">25 secondes · lecture en boucle</span>
-          <div><button id="toggle-animation" class="button button-light" type="button" hidden>Voir l’image fixe</button><a class="button button-dark" href="assets/portrait-fourier.gif" download>Télécharger le GIF <span class="file-size">66,4 Mo</span> <span aria-hidden="true">↗</span></a></div>
+          <span id="player-status" role="status">25,15 secondes · lecture à la demande</span>
+          <div><button id="toggle-animation" class="button button-light" type="button" hidden>Voir l’image fixe</button><a class="button button-dark" href="assets/portrait-fourier.mp4" download>Télécharger la vidéo <span class="file-size">6,6 Mo</span> <span aria-hidden="true">↗</span></a></div>
         </figcaption>
       </figure>
-      <div class="reading-key">
+      <div class="reading-key" id="lecture-animation">
         <p><span class="small-number">01</span><strong>À gauche, l’ajout.</strong> Le clair augmente la luminosité, le sombre la diminue. Le contraste de ce panneau est amplifié pour rendre les petites contributions visibles.</p>
-        <p><span class="small-number">02</span><strong>À droite, la somme.</strong> Les 40 premiers motifs arrivent un par un. La suite avance par groupes&nbsp;: le panneau gauche montre alors la somme du groupe ajouté.</p>
+        <p><span class="small-number">02</span><strong>À droite, la somme.</strong> Les 40 premiers motifs arrivent un par un. La suite avance par groupes&nbsp;: le panneau gauche montre alors <strong>plusieurs ondes superposées</strong>, d’où son aspect plus brouillé. Chaque onde élémentaire reste une sinusoïde.</p>
       </div>
       <dl class="facts">
         <div><dt>384 × 384</dt><dd>pixels dans l’image calculée</dd></div>
         <div><dt>73 729</dt><dd>motifs, en plus du gris moyen</dd></div>
-        <div><dt>205</dt><dd>images dans le GIF</dd></div>
+        <div><dt>205</dt><dd>étapes de calcul affichées</dd></div>
         <div><dt>25,15 s</dt><dd>pour la reconstruction animée</dd></div>
       </dl>
     </section>
@@ -105,7 +109,7 @@
         <h3>Retrouver le visage par addition</h3>
         <p>Le calcul trouve l’amplitude et la phase de chaque fréquence à partir de la photo. On conserve d’abord la composante constante, c’est-à-dire sa luminosité moyenne. Puis on ajoute les ondes, des plus énergétiques aux moins énergétiques.</p>
         <div class="equation equation-sum" role="math" aria-label="Image égale gris moyen plus la somme des motifs sinusoïdaux"><span>I(x, y) = <b>gris moyen</b> + ∑<sub>k</sub> <b>motif<sub>k</sub>(x, y)</b></span></div>
-        <p>Dans ce calcul, les contributions de fréquences distinctes sont orthogonales&nbsp;: leur produit a une moyenne nulle sur la grille. Leur énergie est additive. Garder les plus énergétiques minimise donc l’erreur quadratique pour un nombre donné de motifs complets de cette décomposition. Cela explique le choix d’ordre utilisé dans le GIF.</p>
+        <p>Dans ce calcul, les contributions de fréquences distinctes sont orthogonales&nbsp;: leur produit a une moyenne nulle sur la grille. Leur énergie est additive. Garder les plus énergétiques minimise donc l’erreur quadratique pour un nombre donné de motifs complets de cette décomposition. Cela explique le choix d’ordre utilisé dans la vidéo.</p>
         <p>Les grandes variations de lumière apparaissent souvent tôt, puis les détails s’affinent. Le tri se fait cependant <strong>par énergie, pas strictement par fréquence</strong>. Chaque étape ne fait qu’ajouter les contributions calculées.</p>
 
         <details>
@@ -125,13 +129,13 @@
     <section id="implementation" class="chapter wrap" aria-labelledby="code-titre">
       <div class="chapter-label">02 / L’IMPLÉMENTATION</div>
       <div class="chapter-body">
-        <h2 id="code-titre">Des pixels au GIF, en Python.</h2>
-        <p class="lead">NumPy fait le calcul numérique. Pillow prépare les images, dessine les annotations et assemble l’animation.</p>
+        <h2 id="code-titre">Des pixels à la vidéo, en Python.</h2>
+        <p class="lead">NumPy fait le calcul numérique. Pillow prépare les images et dessine les annotations. FFmpeg encode la vidéo MP4.</p>
         <ol class="pipeline">
           <li><h3>Préparer la référence</h3><p>La photo de 1 280 × 720 pixels est convertie en gris. On en extrait le carré allant de (340, 0) à (1 060, 720), puis on le réduit à 384 × 384 avec un filtre Lanczos. Le tableau de calcul utilise des nombres flottants sur 64 bits.</p></li>
           <li><h3>Calculer et classer les ondes</h3><p><code>fft2(image) / N²</code> donne le spectre normalisé. Chaque coefficient est regroupé avec son conjugué. Les groupes sont classés selon leur énergie décroissante. La moyenne, environ 121,61 sur 255, est présente dès le départ.</p></li>
           <li><h3>Reconstruire les étapes</h3><p>Un spectre partiel reçoit progressivement les coefficients retenus. <code>ifft2(partiel).real * N²</code> produit la somme correspondante. Les huit premières ondes ont quatre étapes d’amplitude ; les suivantes arrivent seules jusqu’au motif 40, puis par groupes de taille croissante.</p></li>
-          <li><h3>Afficher et encoder</h3><p>Le panneau gauche affiche la différence entre deux sommes successives, avec un contraste amplifié. Le panneau droit affiche la reconstruction à son intensité réelle, arrondie et limitée à 0–255 pour l’écran seulement. Une palette commune de 256 gris est utilisée pour les 205 images du GIF. <a class="source-link" href="https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html#gif">Options GIF de Pillow</a></p></li>
+          <li><h3>Afficher et encoder</h3><p>Le panneau gauche affiche la différence entre deux sommes successives, avec un contraste amplifié. Le panneau droit affiche la reconstruction à son intensité réelle, arrondie et limitée à 0–255 pour l’écran seulement. Les 205 états calculés sont envoyés directement à FFmpeg, qui les encode en H.264 de haute qualité, sans passer par un GIF. <a class="source-link" href="https://ffmpeg.org/ffmpeg.html">Documentation FFmpeg</a></p></li>
         </ol>
 
         <div class="code-block"><div class="code-heading"><span>Le cœur du calcul</span><span>Python / NumPy</span></div><pre><code><span class="comment"># image : tableau carré de niveaux de gris</span>
@@ -148,22 +152,22 @@ for indices in groupes_tries:
     <span class="comment"># Conserver une étape pour l’animation.</span></code></pre></div>
         <p class="caption">Extrait de principe. Le script complet inclut le classement, les groupes, le rendu et les vérifications.</p>
 
-        <div class="verification"><span class="verification-mark" aria-hidden="true">✓</span><div><h3>Vérifié jusque dans les pixels</h3><p>L’erreur maximale finale avant arrondi est d’environ <strong>1,71 × 10<sup>−13</sup></strong> niveau de gris. Après arrondi, l’image reconstruite est identique à la référence. Le script vérifie aussi la symétrie, la décroissance de l’erreur quadratique et le panneau final du GIF décodé.</p><a href="calcul/fourier-stats.json">Consulter les mesures du calcul ↗</a></div></div>
+        <div class="verification"><span class="verification-mark" aria-hidden="true">✓</span><div><h3>Vérifié jusque dans les pixels</h3><p>L’erreur maximale finale avant arrondi est d’environ <strong>1,71 × 10<sup>−13</sup></strong> niveau de gris. Après arrondi, l’image reconstruite est identique à la référence. Le script vérifie aussi la symétrie, la décroissance de l’erreur quadratique et le décodage intégral de la vidéo. Cette égalité exacte concerne le calcul et le PNG&nbsp;; le MP4 utilise une compression avec pertes, dont l’erreur est mesurée séparément.</p><a href="calcul/fourier-stats.json">Consulter les mesures du calcul ↗</a></div></div>
 
         <details>
           <summary>Reproduire l’animation sur son ordinateur</summary>
-          <p>Le dossier contient la référence en gris, le script Python et les polices du rendu. Depuis la racine du dossier, avec Python 3 installé&nbsp;:</p>
+          <p>Le dossier contient la référence en gris, le script Python et les polices du rendu. Depuis la racine du dossier, avec Python 3.12 ou plus récent et FFmpeg (avec ffprobe) installés&nbsp;:</p>
           <pre class="terminal"><code>python -m venv .venv
 # Linux / macOS
 source .venv/bin/activate
 # Windows PowerShell : .venv\Scripts\Activate.ps1
 python -m pip install -r calcul/requirements.txt
-python calcul/create_fourier_gif.py</code></pre>
-          <p>Les résultats sont écrits dans <code>resultats/</code>. Le script fourni repart de la référence déjà préparée ; le GIF affiché sur cette page est la copie de l’animation initiale. Il faut quelques centaines de mégaoctets de mémoire pour conserver les images avant l’encodage.</p>
-          <p><a href="calcul/create_fourier_gif.py" download>Télécharger le script complet</a> · <a href="calcul/requirements.txt" download>Dépendances Python</a></p>
+python calcul/create_fourier_video.py</code></pre>
+          <p>Les résultats sont écrits dans <code>resultats/</code>. Le script fourni repart de la référence déjà préparée et génère la vidéo affichée ici. L’option <code>--gif</code> produit aussi un GIF. Il faut quelques centaines de mégaoctets de mémoire pour conserver les étapes avant l’encodage.</p>
+          <p><a href="calcul/create_fourier_video.py" download>Télécharger le script complet</a> · <a href="calcul/requirements.txt" download>Dépendances Python</a></p>
         </details>
 
-        <aside class="note"><h3>Pourquoi un GIF de 66,4 Mo&nbsp;?</h3><p>Il contient 205 images de 1 000 × 750 pixels, avec des textures qui changent beaucoup. La décomposition de Fourier sert ici à expliquer une construction. Ce GIF n’est pas une démonstration de compression efficace&nbsp;: il est bien plus volumineux que la photo de référence.</p></aside>
+        <aside class="note"><h3>Pourquoi une vidéo&nbsp;?</h3><p>Le MP4 remplace le GIF initial de 66,4 Mo. Il permet de faire pause, de revenir sur une étape et de regarder en plein écran. Le panneau gauche devient plus complexe quand plusieurs ondes se superposent&nbsp;: changer de format ne transforme pas leur somme en une seule onde. L’image fixe finale reste disponible en PNG, sans perte.</p></aside>
       </div>
     </section>
 
@@ -192,11 +196,11 @@ python calcul/create_fourier_gif.py</code></pre>
           <p><strong>Exact veut dire exact pour cette référence.</strong> Le résultat retrouve le carré de 384 × 384 pixels en gris. Le recadrage, la réduction et la conversion ont déjà écarté une partie des informations de la photo couleur initiale.</p>
           <p><strong>Les étapes intermédiaires sont des approximations.</strong> Des ondulations peuvent apparaître près des contrastes forts. La DFT traite la grille comme périodique&nbsp;: les différences entre les bords opposés participent elles aussi aux fréquences calculées.</p>
         </div>
-        <div class="resources"><h3>Les fichiers de l’expérience</h3><a href="assets/portrait-fourier.gif" download>Animation GIF <span>66,4 Mo ↗</span></a><a href="assets/reference-gris.png" download>Image de référence <span>PNG ↗</span></a><a href="calcul/create_fourier_gif.py" download>Script reproductible <span>Python ↗</span></a><a href="calcul/fourier-stats.json" download>Mesures et vérifications <span>JSON ↗</span></a></div>
+        <div class="resources"><h3>Les fichiers de l’expérience</h3><a href="https://github.com/mikaeldusenne/portrait-fourier">Tout le code et cette page sur GitHub <span>Dépôt source ↗</span></a><a href="assets/portrait-fourier.mp4" download>Vidéo de la reconstruction <span>MP4 · 6,6 Mo ↗</span></a><a href="assets/reference-gris.png" download>Image de référence <span>PNG ↗</span></a><a href="calcul/create_fourier_video.py" download>Script reproductible <span>Python ↗</span></a><a href="calcul/fourier-stats.json" download>Mesures et vérifications <span>JSON ↗</span></a></div>
         <p class="sources-note">Les liens documentaires sont placés au fil des explications. Pour approfondir la variante en cosinus&nbsp;: <a href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.fft.dct.html">définition de la DCT dans SciPy</a>. Les images et les mesures présentées ici proviennent du calcul de cette expérience.</p>
       </div>
     </section>
   </main>
-  <footer class="site-footer wrap"><a class="brand" href="#"><span class="brand-wave" aria-hidden="true">∿</span> FOURIER EN IMAGES</a><p>Une expérience de Mika, réalisée avec un assistant.<br>Septembre 2026 · Photo, calcul et animation.</p><a href="#">Retour en haut ↑</a></footer>
+  <footer class="site-footer wrap"><a class="brand" href="#"><span class="brand-wave" aria-hidden="true">∿</span> FOURIER EN IMAGES</a><p>Une expérience de Mika, réalisée avec un assistant.<br>Septembre 2026 · Photo, calcul et animation.</p><a href="https://github.com/mikaeldusenne/portrait-fourier">Code source sur GitHub ↗</a><a href="#">Retour en haut ↑</a></footer>
 </body>
 </html>

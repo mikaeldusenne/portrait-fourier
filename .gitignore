@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+resultats/
+node_modules/
+assets/*.gif
+.agents/
+.codex/

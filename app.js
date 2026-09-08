@@ -2,26 +2,35 @@
 
 // Everything runs locally; the page needs no server, libraries, or network API.
 const portrait = document.getElementById("portrait-animation");
+const still = document.getElementById("portrait-still");
 const toggle = document.getElementById("toggle-animation");
 const status = document.getElementById("player-status");
 const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
 let animated = !motionPreference.matches;
 
 function showPortrait() {
-  portrait.src = animated ? "assets/portrait-fourier.gif" : "assets/animation-apercu.png";
-  portrait.alt = animated
-    ? "Animation : des motifs rayés, puis des groupes de motifs, s’ajoutent à gauche tandis que leur somme fait apparaître le portrait de Mika à droite."
-    : "Dernière image de la reconstruction : le portrait de Mika est complet, après l’ajout de 73 729 motifs.";
-  toggle.textContent = animated ? "Voir l’image fixe" : "Voir l’animation";
-  status.textContent = animated ? "25 secondes · lecture en boucle" : "Image fixe · reconstruction complète";
+  if (!animated) portrait.pause();
+  portrait.hidden = !animated;
+  still.hidden = animated;
+  toggle.textContent = animated ? "Voir l’image fixe" : "Voir la vidéo";
+  status.textContent = animated
+    ? "25,15 secondes · lecture à la demande"
+    : "Image fixe · reconstruction complète";
 }
 toggle.hidden = false;
 showPortrait();
 toggle.addEventListener("click", () => { animated = !animated; showPortrait(); });
 motionPreference.addEventListener("change", (event) => { animated = !event.matches; showPortrait(); });
-portrait.addEventListener("error", () => {
-  status.textContent = "Image indisponible. Vérifiez que le dossier assets accompagne la page.";
+portrait.addEventListener("play", () => { status.textContent = "Lecture · utilisez les commandes pour faire pause ou revenir en arrière"; });
+portrait.addEventListener("pause", () => {
+  if (animated) status.textContent = "En pause · choisissez une étape avec la barre de lecture";
 });
+portrait.addEventListener("ended", () => { status.textContent = "Reconstruction complète · relancez la vidéo pour revoir les étapes"; });
+function videoError() {
+  status.textContent = "Vidéo indisponible. Vous pouvez télécharger le MP4 ou afficher l’image fixe.";
+}
+portrait.addEventListener("error", videoError);
+portrait.querySelector("source").addEventListener("error", videoError);
 
 const canvas = document.getElementById("wave-canvas");
 const context = canvas.getContext("2d");

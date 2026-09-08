@@ -1,14 +1,25 @@
 #!/usr/bin/env python3
 """Reconstruct the supplied portrait by adding actual 2D Fourier components.
 
-Portable edition of the script used for the original animation.
+Render the Fourier reconstruction directly to an H.264 video.
+Use --gif to also export the historical GIF format.
 Input: ../assets/reference-gris.png, already cropped and resized.
 Output: ../resultats/. Fonts are bundled in ./fonts/.
-Dependencies: numpy, Pillow (see requirements.txt).
+Dependencies: numpy, Pillow (see requirements.txt), ffmpeg and ffprobe on PATH.
 """
 
 from pathlib import Path
 import json
+import argparse
+import shutil
+import subprocess
+
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--gif", action="store_true", help="Also generate and verify a GIF")
+args = parser.parse_args()
+for executable in ("ffmpeg", "ffprobe"):
+    if not shutil.which(executable):
+        parser.error(f"Install {executable} and put it on PATH before running this script.")
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
@@ -112,7 +123,7 @@ def render(reconstruction, addition, count, energy, batch=0, alpha=1.0, start=Fa
         line2 = "Les rayures vont ajouter les détails."
         value = f"Moyenne : {target.mean():.1f} / 255"
     elif batch == 1:
-        headline = f"Motif {fmt(count)}"
+        headline = f"Onde {fmt(count)}"
         row, col = divmod(int(indices[count - 1]), N)
         fx = col if col <= N // 2 else col - N
         fy = row if row <= N // 2 else row - N
@@ -120,9 +131,9 @@ def render(reconstruction, addition, count, energy, batch=0, alpha=1.0, start=Fa
         line2 = f"Ajout de l’onde : {round(alpha * 100)} %"
         value = f"Variation maximale : ± {amplitude:.2f} / 255"
     else:
-        headline = f"+ {fmt(batch)} motifs"
+        headline = f"+ {fmt(batch)} ondes à la fois"
         line1 = "Le panneau montre leur somme."
-        line2 = "Les petites contributions s’accélèrent."
+        line2 = "Plusieurs ondes, toutes sinusoïdales."
         value = f"Variation maximale : ± {amplitude:.2f} / 255"
     draw.text((32, 524), headline, font=FONTS["detail"], fill=24)
     draw.text((32, 562), line1, font=FONTS["body"], fill=72)
@@ -201,23 +212,68 @@ gray_image(reconstruction).save(OUT / "portrait-fourier-final.png")
 frames[-1].convert("RGB").save(OUT / "animation-apercu.png")
 print(f"Calculated {total} real components, {len(frames)} frames; max error {max_error:.3g}.", flush=True)
 
-# A shared identity grayscale palette preserves the photograph and avoids flicker.
-gif_path = OUT / "portrait-fourier.gif"
-frames[0].save(gif_path, save_all=True, append_images=frames[1:],
-               duration=durations, loop=0, optimize=False, disposal=1)
-with Image.open(gif_path) as gif:
-    assert gif.size == SIZE
-    actual_frames = gif.n_frames
-    actual_duration = 0
-    for index in range(actual_frames):
-        gif.seek(index)
-        gif.load()
-        actual_duration += gif.info.get("duration", 0)
-    # Verify the rendered GIF's last portrait is identical to the expected panel.
-    final_panel = np.asarray(gif.convert("L").crop((456, 142, 968, 654)))
-    expected_panel = np.asarray(reference.resize((512, 512), Image.Resampling.LANCZOS))
-    assert np.array_equal(final_panel, expected_panel)
-    assert actual_duration == sum(durations)
+# 100 fps preserves the original durations (multiples of 10 ms) exactly.
+# Repeated frames only hold each calculated state; no interpolated photograph.
+video_path = OUT / "portrait-fourier.mp4"
+command = [
+    "ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
+    "-f", "rawvideo", "-pixel_format", "gray", "-video_size", "1000x750",
+    "-framerate", "100", "-i", "pipe:0", "-an", "-c:v", "libx264",
+    "-preset", "medium", "-crf", "16", "-pix_fmt", "yuv420p",
+    "-movflags", "+faststart", str(video_path),
+]
+print("Encoding MP4 directly from the calculated images…", flush=True)
+with subprocess.Popen(command, stdin=subprocess.PIPE) as encoder:
+    try:
+        for frame, duration in zip(frames, durations):
+            assert duration % 10 == 0
+            pixels = frame.convert("L").tobytes()
+            for _ in range(duration // 10):
+                encoder.stdin.write(pixels)
+    finally:
+        encoder.stdin.close()
+    if encoder.wait() != 0:
+        raise RuntimeError("FFmpeg could not encode the video")
+
+probe = json.loads(subprocess.check_output([
+    "ffprobe", "-v", "error", "-show_streams", "-show_format", "-of", "json", str(video_path)
+]))
+stream = probe["streams"][0]
+assert (stream["width"], stream["height"]) == SIZE
+assert stream["codec_name"] == "h264" and stream["pix_fmt"] == "yuv420p"
+assert int(stream["nb_frames"]) == sum(durations) // 10
+assert abs(float(probe["format"]["duration"]) * 1000 - sum(durations)) < 1
+# Decode the entire file to catch corrupt frames, then measure the final portrait.
+subprocess.run(["ffmpeg", "-v", "error", "-xerror", "-i", str(video_path),
+                "-f", "null", "-"], check=True)
+decoded = subprocess.check_output([
+    "ffmpeg", "-v", "error", "-sseof", "-0.01", "-i", str(video_path),
+    "-frames:v", "1", "-f", "rawvideo", "-pix_fmt", "gray", "pipe:1",
+])
+final_frame = np.frombuffer(decoded, dtype=np.uint8).reshape(SIZE[1], SIZE[0])
+final_panel = final_frame[142:654, 456:968].astype(float)
+expected_panel = np.asarray(reference.resize((512, 512), Image.Resampling.LANCZOS), dtype=float)
+video_rmse = float(np.sqrt(np.mean((final_panel - expected_panel) ** 2)))
+assert video_rmse < 2, f"Excessive video compression error: {video_rmse}"
+
+if args.gif:
+    # A shared identity grayscale palette preserves the photograph and avoids flicker.
+    gif_path = OUT / "portrait-fourier.gif"
+    frames[0].save(gif_path, save_all=True, append_images=frames[1:],
+                   duration=durations, loop=0, optimize=False, disposal=1)
+    with Image.open(gif_path) as gif:
+        assert gif.size == SIZE
+        actual_frames = gif.n_frames
+        actual_duration = 0
+        for index in range(actual_frames):
+            gif.seek(index)
+            gif.load()
+            actual_duration += gif.info.get("duration", 0)
+        # Verify the rendered GIF's last portrait is identical to the expected panel.
+        final_panel = np.asarray(gif.convert("L").crop((456, 142, 968, 654)))
+        expected_panel = np.asarray(reference.resize((512, 512), Image.Resampling.LANCZOS))
+        assert np.array_equal(final_panel, expected_panel)
+        assert actual_duration == sum(durations)
 
 sheet = Image.new("L", (1000, 780), 248)
 draw = ImageDraw.Draw(sheet)
@@ -237,10 +293,15 @@ stats = {
     "stripe_components": total, "mean_level": float(target.mean()),
     "detail_energy": energy_total, "max_final_error_gray_levels": max_error,
     "isolated_cosine_verification_errors": cosine_errors,
-    "gif_frames": actual_frames, "duration_ms": actual_duration,
-    "gif_bytes": gif_path.stat().st_size,
-    "all_frame_rmse_monotonic": True, "gif_final_panel_matches_reference": True,
+    "rendered_states": len(frames), "duration_ms": sum(durations),
+    "video_frames": int(stream["nb_frames"]), "video_bytes": video_path.stat().st_size,
+    "video_codec": stream["codec_name"], "video_pixel_format": stream["pix_fmt"],
+    "video_final_panel_rmse_gray_levels": video_rmse,
+    "all_frame_rmse_monotonic": True, "rounded_reconstruction_matches_reference": True,
     "frames": measurements,
 }
+if args.gif:
+    stats.update(gif_frames=actual_frames, gif_bytes=gif_path.stat().st_size,
+                 gif_final_panel_matches_reference=True)
 (OUT / "fourier-stats.json").write_text(json.dumps(stats, indent=2), encoding="utf-8")
 print(json.dumps({key: value for key, value in stats.items() if key != "frames"}, indent=2), flush=True)
